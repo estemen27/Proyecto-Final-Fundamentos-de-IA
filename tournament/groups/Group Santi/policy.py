@@ -17,15 +17,56 @@ class SantiPolicy(Policy):
     Los pesos por defecto pueden ajustarse editando las constantes de clase.
     """
 
-    # Pesos configurables (ajusta para crear variantes ofensiva/defensiva/balanceada)
     WIN_WEIGHT = 10000.0
     BLOCK_WEIGHT = 9000.0
     CENTER_WEIGHT = 3.0
     THREAT_WEIGHT_2 = 1.0
     THREAT_WEIGHT_3 = 5.0
     SAFETY_PENALTY = 10000.0
+    
+    PRESETS = {
+        "offensive": {
+            "WIN_WEIGHT": 10000.0,
+            "BLOCK_WEIGHT": 5000.0,
+            "CENTER_WEIGHT": 4.0,
+            "THREAT_WEIGHT_2": 1.0,
+            "THREAT_WEIGHT_3": 8.0,
+            "SAFETY_PENALTY": 8000.0,
+        },
+        "defensive": {
+            "WIN_WEIGHT": 10000.0,
+            "BLOCK_WEIGHT": 12000.0,
+            "CENTER_WEIGHT": 2.0,
+            "THREAT_WEIGHT_2": 0.5,
+            "THREAT_WEIGHT_3": 3.0,
+            "SAFETY_PENALTY": 20000.0,
+        },
+        "balanced": {
+            "WIN_WEIGHT": 10000.0,
+            "BLOCK_WEIGHT": 9000.0,
+            "CENTER_WEIGHT": 3.0,
+            "THREAT_WEIGHT_2": 1.0,
+            "THREAT_WEIGHT_3": 5.0,
+            "SAFETY_PENALTY": 10000.0,
+        },
+    }
 
-    def mount(self) -> None:
+    MODE: str | None = None
+
+    @classmethod
+    def apply_preset(cls, name: str) -> None:
+        """Apply a preset by name, setting class-level weights.
+
+        This updates class attributes so subsequent instantiations use the preset.
+        """
+        presets = getattr(cls, "PRESETS", {})
+        if name not in presets:
+            raise ValueError(f"Preset {name} not found. Available: {list(presets.keys())}")
+        for k, v in presets[name].items():
+            setattr(cls, k, v)
+        cls.MODE = name
+
+    def mount(self, timeout: float | None = None) -> None:
         # Inicialización si se requiere (por ejemplo cargar parámetros desde archivo).
         pass
 
@@ -137,6 +178,8 @@ class SantiPolicy(Policy):
             elif score == best_score:
                 best_cols.append(col)
 
-        # Elegir aleatoriamente entre los mejores empates
-        chosen = int(random.choice(best_cols))
-        return chosen
+        # Elegir aleatoriamente entre los mejores empates.
+        # Si por alguna razón no quedó ninguna opción evaluada, caer en una columna legal.
+        if best_cols:
+            return int(random.choice(best_cols))
+        return int(random.choice(available))
