@@ -1,6 +1,6 @@
 # Agente MCTS — Connect-4
-### Fundamentos de Inteligencia Artificial · Universidad de La Sabana · 2026.1
-**Autor:** Esteban Bernal Cortés · Grupo Esteban
+### Fundamentos de Inteligencia Artificial 
+**Autor:** Esteban Bernal Cortés
 
 ---
 
