@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(python -c ' *)",
-      "PowerShell(cd \"C:\\\\Users\\\\Esteb\\\\IA\\\\Proyecto-Final-Fundamentos-de-IA\"; Get-Content entrega.ipynb | ConvertFrom-Json | ForEach-Object { Write-Host \"Celdas:\" $_.cells.Count })"
-    ]
-  }
-}
