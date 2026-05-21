@@ -4,14 +4,12 @@ from connect4.connect_state import ConnectState
 
 ROWS, COLS = 6, 7
 
-
 def _window_score(window, player):
     mine  = window.count(player)
     empty = window.count(0)
     if mine == 3 and empty == 1: return 0.4
     if mine == 2 and empty == 2: return 0.05
     return 0.0
-
 
 def _heuristic(board, player):
     s = 0.0
@@ -29,14 +27,11 @@ def _heuristic(board, player):
             s += _window_score([int(board[r - i][c + i]) for i in range(4)], player)
     return s
 
-
 def _shape(board):
     return _heuristic(board, 1) - _heuristic(board, -1)
 
-
 def _random_action(state):
     return int(np.random.choice(state.get_free_cols()))
-
 
 class FVMCPolicy(Policy):
 
