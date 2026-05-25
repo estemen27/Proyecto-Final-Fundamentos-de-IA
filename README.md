@@ -1,196 +1,73 @@
-# Connect-4 Reactive Heuristic Agent
+# Connect-4 Minimax Agent (Group Santi)
 
-## Idea General
+## Resumen
 
-Este agente sigue un enfoque reactivo basado en evaluación inmediata del tablero en lugar de búsqueda profunda o simulaciones Monte Carlo.
+Este proyecto implementa un agente de Connect-4 basado en minimax con poda alpha-beta.
 
-La decisión se toma asignando un puntaje a cada acción disponible usando un conjunto configurable de reglas y prioridades heurísticas.
+La idea central es simple: en cada turno el agente mira varios pasos hacia adelante (lookahead) y asume que el rival siempre va a responder de la forma mas incomoda posible.
 
-El objetivo es estudiar cómo diferentes configuraciones y estrategias afectan el desempeño del agente contra distintos oponentes.
+La variable numerica principal para el analisis es `DEPTH` (profundidad de busqueda).
 
----
+## Que hace diferente a este agente
 
-# Filosofía del Agente
+- Usa busqueda adversarial (minimax) en lugar de reaccionar solo al turno actual.
+- Incluye poda alpha-beta para reducir ramas innecesarias.
+- Prioriza explorar primero columnas centrales para podar mas temprano.
+- Mantiene una heuristica compacta y legible (sin pesos exagerados).
 
-El agente:
+## Donde esta el agente
 
-- no construye un árbol de búsqueda profundo,
-- no intenta predecir muchas jugadas futuras,
-- y no utiliza aprendizaje estadístico.
+- Archivo principal: `tournament/groups/Group Santi/policy.py`
+- Clase: `SantiPolicy`
 
-En cambio:
+## Parametros importantes
 
-- evalúa el estado actual,
-- detecta amenazas y oportunidades inmediatas,
-- asigna un score a cada movimiento,
-- y selecciona la acción con mayor utilidad heurística.
+En `policy.py`, los parametros mas relevantes son:
 
-Esto permite:
+- `DEPTH`: cuantos plies mira hacia adelante.
+- `CENTER_WEIGHT`: preferencia por control del centro.
+- `TWO_IN_ROW_WEIGHT`: valor de ventanas favorables con 2 fichas.
+- `THREE_IN_ROW_WEIGHT`: valor de ventanas favorables con 3 fichas.
+- `OPP_THREE_PENALTY`: castigo por amenazas de 3 del rival.
+- `WIN_SCORE` / `LOSS_SCORE`: prioridad de estados terminales.
 
-- decisiones rápidas,
-- comportamiento interpretable,
-- análisis modular,
-- comparación experimental entre configuraciones.
+## Ejecucion rapida
 
----
+Desde la carpeta `tournament`:
 
-# Estrategia General
+```bash
+python main.py
+```
 
-Cada movimiento posible recibe un puntaje calculado con reglas parametrizables.
+Esto ejecuta el torneo usando las politicas detectadas en `groups`.
 
-Ejemplo conceptual:
+## Validacion experimental (entrega.ipynb)
 
-score(action) =
+El notebook `tournament/groups/Group Santi/entrega.ipynb` debe cubrir:
 
-    win_weight * immediate_win +
+- rendimiento vs jugador aleatorio por color (rojo y amarillo),
+- autodesempeno (el agente contra si mismo),
+- barrido de la variable numerica `DEPTH`,
+- metricas de calidad (winrate) y costo (tiempo por jugada / tiempo total),
+- graficas que soporten conclusiones.
 
-    block_weight * immediate_block +
+## Como se alinea con la rubrica
 
-    center_weight * center_priority +
+1. Diseno de agente:
+    El agente es explicable, implementado con una estrategia clara (minimax + poda), y su comportamiento depende de parametros concretos.
 
-    threat_weight * threat_creation +
+2. Analisis:
+    Se propone evaluar en funcion de una variable numerica (`DEPTH`) y bajo diferentes oponentes (aleatorio y self-play), incluyendo separacion por color.
 
-    safety_weight * safe_move
+3. Propuesta de mejora:
+    El analisis permite encontrar cuellos de botella de costo/beneficio (por ejemplo, mayor profundidad con mejora marginal de winrate) y justificar mejoras futuras.
 
-La acción final es:
+4. Presentacion:
+    Este README y el notebook estan pensados para que se pueda defender el diseno con evidencia reproducible.
 
-argmax(score(action))
+## Ideas de mejora futura
 
----
-
-# Heurísticas del Agente
-
-## 1. Immediate Win
-
-Si una acción genera victoria inmediata:
-
-- prioridad máxima.
-
-Parámetro:
-
-- `WIN_WEIGHT`
-
----
-
-## 2. Immediate Block
-
-Si el oponente puede ganar en el siguiente turno:
-
-- bloquear esa jugada.
-
-Parámetro:
-
-- `BLOCK_WEIGHT`
-
----
-
-## 3. Center Preference
-
-Las columnas centrales suelen generar más conexiones potenciales.
-
-El agente puede priorizar:
-
-- columnas centrales,
-- control posicional.
-
-Parámetro:
-
-- `CENTER_WEIGHT`
-
----
-
-## 4. Threat Creation
-
-El agente favorece jugadas que generan:
-
-- 2 en línea,
-- 3 en línea,
-- múltiples amenazas futuras.
-
-Parámetro:
-
-- `THREAT_WEIGHT`
-
----
-
-## 5. Safe Move Filtering
-
-Evita movimientos que permitan:
-
-- victoria inmediata del rival,
-- aperturas peligrosas.
-
-Parámetro:
-
-- `SAFETY_WEIGHT`
-
----
-
-# Configuraciones Experimentales
-
-El agente permite activar/desactivar reglas y modificar pesos heurísticos para estudiar el impacto en el desempeño.
-
-Ejemplos:
-
-## Configuración ofensiva
-
-- THREAT_WEIGHT alto
-- BLOCK_WEIGHT moderado
-
-Busca maximizar presión ofensiva.
-
----
-
-## Configuración defensiva
-
-- BLOCK_WEIGHT alto
-- SAFETY_WEIGHT alto
-
-Prioriza supervivencia y control.
-
----
-
-## Configuración balanceada
-
-Pesos intermedios entre ataque y defensa.
-
----
-
-# Variables de Análisis
-
-Se planea analizar:
-
-- porcentaje de victorias vs agente aleatorio,
-- desempeño jugando primero y segundo,
-- tiempo promedio de decisión,
-- impacto de cada heurística,
-- comparación entre configuraciones,
-- desempeño contra sí mismo.
-
----
-
-# Hipótesis
-
-Posibles hipótesis experimentales:
-
-- priorizar el centro mejora el win rate,
-- estrategias ofensivas ganan más rápido pero son menos seguras,
-- bloquear amenazas inmediatas tiene alto impacto,
-- agregar demasiadas heurísticas aumenta costo computacional con poca mejora.
-
----
-
-# Diferenciación Conceptual
-
-Este agente se diferencia de enfoques basados en:
-
-- Monte Carlo Tree Search (MCTS),
-- búsqueda adversarial profunda,
-- simulaciones probabilísticas,
-- reinforcement learning.
-
-El enfoque principal aquí es:
-
-- evaluación heurística local,
-- toma de decisiones reactiva,
-- comportamiento interpretable y configurable.
+- Ajustar dinamicamente la profundidad segun fase de partida.
+- Agregar tabla de transposicion para reutilizar estados evaluados.
+- Mejorar ordenamiento de jugadas con historial de cortes (move ordering adaptativo).
+- Probar una segunda version del agente con la misma base y distinta funcion de evaluacion para comparar versiones en el informe.

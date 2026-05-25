@@ -5,76 +5,26 @@ import random
 
 
 class SantiPolicy(Policy):
-    """Agente reactivo heurístico configurable.
+    """Policy basada en minimax con un DEPTH que sirve de tipo lookahead."""
 
-    Implementa las heurísticas descritas en el README:
-      - Immediate Win
-      - Immediate Block
-      - Center Preference
-      - Threat Creation (counts de ventanas de 2/3)
-      - Safe Move Filtering (evita jugadas que permitan mate inmediato)
+    DEPTH = 3
 
-    Los pesos por defecto pueden ajustarse editando las constantes de clase.
-    """
+    CENTER_WEIGHT = 1
+    TWO_IN_ROW_WEIGHT = 2
+    THREE_IN_ROW_WEIGHT = 6
+    OPP_THREE_PENALTY = 5
 
-    WIN_WEIGHT = 10000.0
-    BLOCK_WEIGHT = 9000.0
-    CENTER_WEIGHT = 3.0
-    THREAT_WEIGHT_2 = 1.0
-    THREAT_WEIGHT_3 = 5.0
-    SAFETY_PENALTY = 10000.0
-    
-    PRESETS = {
-        "offensive": {
-            "WIN_WEIGHT": 10000.0,
-            "BLOCK_WEIGHT": 5000.0,
-            "CENTER_WEIGHT": 4.0,
-            "THREAT_WEIGHT_2": 1.0,
-            "THREAT_WEIGHT_3": 8.0,
-            "SAFETY_PENALTY": 8000.0,
-        },
-        "defensive": {
-            "WIN_WEIGHT": 10000.0,
-            "BLOCK_WEIGHT": 12000.0,
-            "CENTER_WEIGHT": 2.0,
-            "THREAT_WEIGHT_2": 0.5,
-            "THREAT_WEIGHT_3": 3.0,
-            "SAFETY_PENALTY": 20000.0,
-        },
-        "balanced": {
-            "WIN_WEIGHT": 10000.0,
-            "BLOCK_WEIGHT": 9000.0,
-            "CENTER_WEIGHT": 3.0,
-            "THREAT_WEIGHT_2": 1.0,
-            "THREAT_WEIGHT_3": 5.0,
-            "SAFETY_PENALTY": 10000.0,
-        },
-    }
-
-    MODE: str | None = None
-
-    @classmethod
-    def apply_preset(cls, name: str) -> None:
-        """Apply a preset by name, setting class-level weights.
-
-        This updates class attributes so subsequent instantiations use the preset.
-        """
-        presets = getattr(cls, "PRESETS", {})
-        if name not in presets:
-            raise ValueError(f"Preset {name} not found. Available: {list(presets.keys())}")
-        for k, v in presets[name].items():
-            setattr(cls, k, v)
-        cls.MODE = name
+    WIN_SCORE = 30
+    LOSS_SCORE = -30
 
     def mount(self, timeout: float | None = None) -> None:
-        # Inicialización si se requiere (por ejemplo cargar parámetros desde archivo).
         pass
 
     def _infer_player(self, board: np.ndarray) -> int:
-        # Deduce el signo del jugador que debe mover (y por tanto el signo de esta política)
+        # Deduce el signo del jugador que debe mover
         n_neg = np.count_nonzero(board == -1)
         n_pos = np.count_nonzero(board == 1)
-        # -1 comienza primero; si hay menos o igual -1 que 1 -> es el turno de -1
+        # -1 comienza primero; si hay menos o igual -1 que 1 es el turno de -1
         return -1 if n_neg <= n_pos else 1
 
     def _count_windows(self, board: np.ndarray, player: int, length: int) -> int:
@@ -106,80 +56,115 @@ class SantiPolicy(Policy):
                     count += 1
         return count
 
+    def _evaluate_board(self, board: np.ndarray, player: int) -> float:
+        """Evalua posicion no terminal desde la perspectiva de `player`."""
+        score = 0.0
+
+        # Control del centro
+        center_col = board[:, 3]
+        score += self.CENTER_WEIGHT * np.count_nonzero(center_col == player)
+        score -= self.CENTER_WEIGHT * np.count_nonzero(center_col == -player)
+
+        my_two = self._count_windows(board, player, 2)
+        my_three = self._count_windows(board, player, 3)
+        opp_three = self._count_windows(board, -player, 3)
+
+        score += self.TWO_IN_ROW_WEIGHT * my_two
+        score += self.THREE_IN_ROW_WEIGHT * my_three
+        score -= self.OPP_THREE_PENALTY * opp_three
+
+        return score
+
+    def _minimax(
+        self,
+        state: ConnectState,
+        depth: int,
+        alpha: float,
+        beta: float,
+        maximizing: bool,
+        root_player: int,
+    ) -> float:
+        winner = state.get_winner()
+        if winner == root_player:
+            return self.WIN_SCORE + depth
+        if winner == -root_player:
+            return self.LOSS_SCORE - depth
+        if depth == 0 or state.is_final():
+            return self._evaluate_board(state.board, root_player)
+
+        available = state.get_free_cols()
+        if not available:
+            return self._evaluate_board(state.board, root_player)
+
+        # Ordena columnas priorizando centro para mejorar poda y decision.
+        ordered_moves = sorted(available, key=lambda c: abs(3 - c))
+
+        if maximizing:
+            # Turno del agente: se queda con la jugada que mas le conviene.
+            value = float("-inf")
+            for col in ordered_moves:
+                child = state.transition(int(col))
+                value = max(
+                    value,
+                    self._minimax(child, depth - 1, alpha, beta, False, root_player),
+                )
+                alpha = max(alpha, value)
+                if alpha >= beta:
+                    break
+            return value
+
+        # Turno del rival: asume la respuesta mas incomoda para el agente.
+        value = float("inf")
+        for col in ordered_moves:
+            child = state.transition(int(col))
+            value = min(
+                value,
+                self._minimax(child, depth - 1, alpha, beta, True, root_player),
+            )
+            beta = min(beta, value)
+            if alpha >= beta:
+                break
+        return value
+
     def act(self, s: np.ndarray) -> int:
         board = np.array(s)
         player = self._infer_player(board)
-        opponent = -player
         state = ConnectState(board, player)
 
         available = state.get_free_cols()
         if not available:
-            # Fallback aleatorio si no hay columnas (aunque normalmente no sucede porque is_final previene)
+            # Fallback
             rng = np.random.default_rng()
             return int(rng.integers(0, 7))
 
-        best_score = None
-        best_cols = []
-
+        # Victoria inmediata si hay
         for col in available:
-            # Simula la jugada
-            try:
-                new_state = state.transition(int(col))
-            except ValueError:
-                continue
+            nxt = state.transition(int(col))
+            if nxt.get_winner() == player:
+                return int(col)
 
-            score = 0.0
+        best_score = float("-inf")
+        best_cols = []
+        ordered_moves = sorted(available, key=lambda c: abs(3 - c))
 
-            # Immediate win
-            if new_state.get_winner() == player:
-                score += self.WIN_WEIGHT
+        for col in ordered_moves:
+            next_state = state.transition(int(col))
+            score = self._minimax(
+                next_state,
+                max(0, int(self.DEPTH) - 1),
+                float("-inf"),
+                float("inf"),
+                False,
+                player,
+            )
 
-            # Immediate block: si tras mi jugada el oponente tiene una jugada que le da victoria, la bloqueamos
-            # (se valora alto como bloqueo)
-            # Para block: comprobar si existe una columna que haga ganar al oponente en su turno
-            opponent_can_win = False
-            for c2 in new_state.get_free_cols():
-                try:
-                    s2 = new_state.transition(int(c2))
-                except ValueError:
-                    continue
-                if s2.get_winner() == opponent:
-                    opponent_can_win = True
-                    break
-            if opponent_can_win:
-                score += self.BLOCK_WEIGHT
-
-            # Center preference (col 3 es el centro)
-            center_score = (3 - abs(col - 3)) * self.CENTER_WEIGHT
-            score += center_score
-
-            # Threat creation: contar ventanas con 2 y 3 fichas propias (sin fichas enemigas)
-            n2 = self._count_windows(new_state.board, player, 2)
-            n3 = self._count_windows(new_state.board, player, 3)
-            score += n2 * self.THREAT_WEIGHT_2 + n3 * self.THREAT_WEIGHT_3
-
-            # Safety filtering: si la jugada permite que el rival gane inmediatamente (en su siguiente), penalizar
-            # Aquí buscamos si tras mi movimiento el oponente tiene una jugada ganadora -> gran penalización
-            allows_opponent_win = False
-            for c2 in new_state.get_free_cols():
-                try:
-                    s2 = new_state.transition(int(c2))
-                except ValueError:
-                    continue
-                if s2.get_winner() == opponent:
-                    allows_opponent_win = True
-                    break
-            if allows_opponent_win:
-                score -= self.SAFETY_PENALTY
-
-            if best_score is None or score > best_score:
+            if score > best_score:
                 best_score = score
                 best_cols = [col]
             elif score == best_score:
                 best_cols.append(col)
 
-        # Elegir aleatoriamente entre los mejores empates.
-        # Si por alguna razón no quedó ninguna opción evaluada, caer en una columna legal.
+        # Desempate aleatorio
         if best_cols:
             return int(random.choice(best_cols))
         return int(random.choice(available))
