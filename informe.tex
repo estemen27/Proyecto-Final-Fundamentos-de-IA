@@ -1,0 +1,92 @@
+\documentclass[11pt, a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage[margin=2cm, top=1.8cm, bottom=1.8cm]{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{parskip}
+\usepackage{microtype}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amsmath}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue,
+    citecolor=black
+}
+
+\captionsetup{font=small, labelfont=bf}
+
+\title{\textbf{Agente Connect-4: Trial-Based Online Policy Improvement\\con Reward Shaping}\\[0.4em]
+\large Fundamentos de Inteligencia Artificial --- 2026.1}
+\author{Esteban Bernal Cortés}
+\date{}
+
+\begin{document}
+
+\maketitle
+\vspace{-1.2em}
+
+\section*{Descripción del agente}
+
+El agente implementa \textit{Trial-Based Online Policy Improvement} sin árbol de búsqueda. Antes de cada jugada corre \texttt{n\_trials} simulaciones desde la posición actual: cada simulación genera una trayectoria completa hasta el final del juego y actualiza una tabla de valores $\hat{q}(s, a)$ con el resultado observado. Al terminar el presupuesto, elige la columna con el valor esperado más alto.
+
+La estructura central es una tabla~$Q$ plana indexada por \texttt{(tablero\_en\_bytes, columna)}. No hay árbol, no hay UCB: la exploración desde la raíz se garantiza mediante \textit{exploring starts} (la primera acción de cada trial se elige uniformemente al azar), y ambos jugadores comparten la misma tabla con un cambio de signo por turno para capturar el carácter de suma cero del juego.
+
+\textbf{Diferenciación respecto al resto del grupo.} El agente de otro integrante del grupo usa MCTS con tabla de transposición y UCB como política de árbol. La diferencia conceptual es que MCTS mantiene una estructura de árbol que crece entre trials, con dos políticas distintas (UCB dentro del árbol, rollout fuera). El agente aquí descrito es el algoritmo previo a MCTS, sin árbol, donde la cobertura que UCB hace adaptativamente la hace exploring starts de forma uniforme.
+
+Código final del agente:
+\url{https://github.com/estemen27/Proyecto-Final-Fundamentos-de-IA/tree/esteban/MCTS-agent}
+
+\section*{Versiones}
+
+Se desarrollaron dos versiones con los mismos hiperparámetros base (\texttt{n\_trials=500}, \texttt{max\_rollout=50}) y diferente configuración del reward shaping:
+
+\begin{itemize}
+    \item \textbf{V1} (\texttt{shaping\_weight=0}): FVMC puro. La única señal de aprendizaje es el resultado terminal de la partida ($+1$, $-1$ o $0$). Aprende más lentamente porque el reward es escaso: muchas trayectorias terminan sin llegar al final del juego.
+
+    \item \textbf{V2} (\texttt{shaping\_weight=0.1}): FVMC con reward shaping. Al final de cada trial se evalúa la calidad del tablero con una heurística de amenazas (ventanas de 3 o 2 en fila) y se añade un bonus proporcional a la diferencia entre las amenazas de cada jugador. Esto densifica la señal de aprendizaje sin modificar el algoritmo base.
+\end{itemize}
+
+\section*{Análisis de desempeño}
+
+Los experimentos completos y las gráficas se encuentran en \texttt{entrega.ipynb}.
+
+\textbf{Efecto de \texttt{n\_trials} en ambas versiones} (Experimento~1). Se evaluaron V1 y V2 contra el jugador aleatorio a cuatro presupuestos de simulación: 100, 300, 500 y 800 trials, jugando 20~partidas por color en cada configuración. Como muestra la Figura~\ref{fig:trials}, V2 alcanza un desempeño estable antes que V1, con cero derrotas desde \texttt{n\_trials}$\,\geq\,$300. V1 también gana al aleatorio de forma consistente a presupuestos medios, pero con mayor varianza a \texttt{n\_trials} bajos. El parámetro \texttt{n\_trials} es el recurso crítico del agente: más simulaciones implican $\hat{q}$-values más estables y mejores decisiones.
+
+\textbf{Contribución aislada del reward shaping} (Experimento~2). Con \texttt{n\_trials}~fijo en 500, V2 acumula menos derrotas que V1 en 30~partidas por color. El costo computacional de ambas versiones es prácticamente idéntico, lo que confirma que el shaping mejora la calidad sin overhead significativo.
+
+\textbf{Auto-juego y estabilidad} (Experimentos~3 y~4). El auto-juego de V2 contra una segunda instancia idéntica produce resultados aproximadamente simétricos, lo que indica que el agente no tiene sesgo sistemático por color. En la confrontación directa V2 contra V1, V2 gana la mayoría de partidas con todo lo demás igual, confirmando que el reward shaping aporta una ventaja real más allá de la varianza estadística.
+
+\begin{figure}[h]
+    \centering
+    \begin{subfigure}[b]{0.52\textwidth}
+        \includegraphics[width=\textwidth]{fig1_win_rate.png}
+        \caption{Victorias de V1 y V2 vs.\ aleatorio según \texttt{n\_trials}.}
+        \label{fig:trials}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.44\textwidth}
+        \includegraphics[width=\textwidth]{fig4_v2_vs_v1.png}
+        \caption{V2 (shaping) vs.\ V1 (vainilla) cara a cara.}
+        \label{fig:h2h}
+    \end{subfigure}
+    \caption{Resultados de los experimentos principales. Las gráficas completas se generan ejecutando \texttt{entrega.ipynb}.}
+\end{figure}
+
+\section*{Propuestas de mejora}
+
+El análisis señala tres cuellos de botella concretos:
+
+\textbf{1. Default policy proporcional a $\hat{q}$}. Los rollouts actuales son uniformemente aleatorios: cada acción legal tiene la misma probabilidad independientemente de los valores aprendidos. Esto es el mayor desperdicio de información, porque el agente ya tiene estimaciones de $\hat{q}(s,a)$ que no usa durante las simulaciones. Una política de rollout que muestree proporcionalmente a los $\hat{q}$-values (o mediante softmax) haría cada trial considerablemente más informativo y reduciría la varianza del estimador. El Experimento~1 evidencia esta limitación: incluso con \texttt{n\_trials=800} hay partidas perdidas, lo que sugiere que la calidad de cada trial es el cuello de botella, no solo la cantidad.
+
+\textbf{2. Reward shaping en cada transición}. El shaping actual evalúa la heurística solo en el estado final del trial, lo que equivale a una modificación de la recompensa terminal en lugar de un shaping paso a paso. Aplicar la diferencia de potencial $\Phi(s') - \Phi(s)$ en cada transición daría señal de aprendizaje a lo largo de toda la trayectoria, no únicamente en el último estado. La evidencia del Experimento~2 muestra que V1 (sin shaping) tiene mayor varianza precisamente porque la señal terminal escasa es insuficiente para muchos trials que se cortan por \texttt{max\_rollout}.
+
+\textbf{3. Every-Visit en lugar de First-Visit}. El conjunto \texttt{seen} en el backpropagation descarta todas las apariciones de un par $(s,a)$ en un trial excepto la primera. Cambiar a every-visit aprovecharía cada aparición del par como una actualización independiente, usando los datos del trial de forma más completa. El costo computacional adicional es prácticamente nulo, y el beneficio sería mayor en trayectorias largas donde el mismo estado se revisita.
+
+\end{document}
