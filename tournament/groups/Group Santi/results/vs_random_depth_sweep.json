@@ -1,0 +1,58 @@
+[
+  {
+    "depth": 2,
+    "games_per_color": 40,
+    "red_wins": 40,
+    "red_draws": 0,
+    "red_losses": 0,
+    "yellow_wins": 40,
+    "yellow_draws": 0,
+    "yellow_losses": 0,
+    "red_win_rate": 1.0,
+    "yellow_win_rate": 1.0,
+    "global_win_rate": 1.0,
+    "avg_santi_ms_per_move": 18.721067843845457
+  },
+  {
+    "depth": 3,
+    "games_per_color": 40,
+    "red_wins": 40,
+    "red_draws": 0,
+    "red_losses": 0,
+    "yellow_wins": 40,
+    "yellow_draws": 0,
+    "yellow_losses": 0,
+    "red_win_rate": 1.0,
+    "yellow_win_rate": 1.0,
+    "global_win_rate": 1.0,
+    "avg_santi_ms_per_move": 45.96228279364817
+  },
+  {
+    "depth": 4,
+    "games_per_color": 40,
+    "red_wins": 40,
+    "red_draws": 0,
+    "red_losses": 0,
+    "yellow_wins": 40,
+    "yellow_draws": 0,
+    "yellow_losses": 0,
+    "red_win_rate": 1.0,
+    "yellow_win_rate": 1.0,
+    "global_win_rate": 1.0,
+    "avg_santi_ms_per_move": 207.60993137255335
+  },
+  {
+    "depth": 5,
+    "games_per_color": 40,
+    "red_wins": 40,
+    "red_draws": 0,
+    "red_losses": 0,
+    "yellow_wins": 40,
+    "yellow_draws": 0,
+    "yellow_losses": 0,
+    "red_win_rate": 1.0,
+    "yellow_win_rate": 1.0,
+    "global_win_rate": 1.0,
+    "avg_santi_ms_per_move": 522.4950633475478
+  }
+]

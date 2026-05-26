@@ -1,0 +1,30 @@
+[
+  {
+    "depth": 2,
+    "self_red_wins": 21,
+    "self_yellow_wins": 9,
+    "self_draws": 0,
+    "self_draw_rate": 0.0
+  },
+  {
+    "depth": 3,
+    "self_red_wins": 16,
+    "self_yellow_wins": 14,
+    "self_draws": 0,
+    "self_draw_rate": 0.0
+  },
+  {
+    "depth": 4,
+    "self_red_wins": 7,
+    "self_yellow_wins": 19,
+    "self_draws": 4,
+    "self_draw_rate": 0.13333333333333333
+  },
+  {
+    "depth": 5,
+    "self_red_wins": 15,
+    "self_yellow_wins": 15,
+    "self_draws": 0,
+    "self_draw_rate": 0.0
+  }
+]

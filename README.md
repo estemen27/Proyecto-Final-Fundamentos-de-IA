@@ -1,37 +1,18 @@
-# Connect-4 Minimax Agent (Group Santi)
+# Group Santi - Connect-4 Agent
 
 ## Resumen
 
-Este proyecto implementa un agente de Connect-4 basado en minimax con poda alpha-beta.
+Este branch contiene el agente final de Connect-4 de Group Santi. La versión actual usa minimax con poda alpha-beta y toma como variable principal de análisis la profundidad de búsqueda (`DEPTH`).
 
-La idea central es simple: en cada turno el agente mira varios pasos hacia adelante (lookahead) y asume que el rival siempre va a responder de la forma mas incomoda posible.
+La idea es sencilla: mirar algunas jugadas hacia adelante, asumir que el rival responde bien y escoger la acción que mejor queda parada después de esa respuesta.
 
-La variable numerica principal para el analisis es `DEPTH` (profundidad de busqueda).
+## Estructura
 
-## Que hace diferente a este agente
+- `tournament/groups/Group Santi/policy.py`: agente `SantiPolicy`.
+- `tournament/groups/Group Santi/entrega.ipynb`: estudio experimental y gráficas.
+- `tournament/groups/Group Santi/results/`: resultados guardados por el notebook.
 
-- Usa busqueda adversarial (minimax) en lugar de reaccionar solo al turno actual.
-- Incluye poda alpha-beta para reducir ramas innecesarias.
-- Prioriza explorar primero columnas centrales para podar mas temprano.
-- Mantiene una heuristica compacta y legible (sin pesos exagerados).
-
-## Donde esta el agente
-
-- Archivo principal: `tournament/groups/Group Santi/policy.py`
-- Clase: `SantiPolicy`
-
-## Parametros importantes
-
-En `policy.py`, los parametros mas relevantes son:
-
-- `DEPTH`: cuantos plies mira hacia adelante.
-- `CENTER_WEIGHT`: preferencia por control del centro.
-- `TWO_IN_ROW_WEIGHT`: valor de ventanas favorables con 2 fichas.
-- `THREE_IN_ROW_WEIGHT`: valor de ventanas favorables con 3 fichas.
-- `OPP_THREE_PENALTY`: castigo por amenazas de 3 del rival.
-- `WIN_SCORE` / `LOSS_SCORE`: prioridad de estados terminales.
-
-## Ejecucion rapida
+## Cómo correrlo
 
 Desde la carpeta `tournament`:
 
@@ -39,35 +20,65 @@ Desde la carpeta `tournament`:
 python main.py
 ```
 
-Esto ejecuta el torneo usando las politicas detectadas en `groups`.
+Eso ejecuta el torneo usando las políticas detectadas dentro de `groups`.
 
-## Validacion experimental (entrega.ipynb)
+Para abrir el estudio:
 
-El notebook `tournament/groups/Group Santi/entrega.ipynb` debe cubrir:
+```bash
+jupyter notebook tournament/groups/Group\ Santi/entrega.ipynb
+```
 
-- rendimiento vs jugador aleatorio por color (rojo y amarillo),
-- autodesempeno (el agente contra si mismo),
-- barrido de la variable numerica `DEPTH`,
-- metricas de calidad (winrate) y costo (tiempo por jugada / tiempo total),
-- graficas que soporten conclusiones.
+## Parámetros del agente
 
-## Como se alinea con la rubrica
+Los parámetros que realmente importan para la versión actual son:
 
-1. Diseno de agente:
-    El agente es explicable, implementado con una estrategia clara (minimax + poda), y su comportamiento depende de parametros concretos.
+- `DEPTH`: profundidad de búsqueda.
+- `CENTER_WEIGHT`: preferencia por el centro.
+- `TWO_IN_ROW_WEIGHT`: valor de ventanas con 2 fichas propias.
+- `THREE_IN_ROW_WEIGHT`: valor de ventanas con 3 fichas propias.
+- `OPP_THREE_PENALTY`: castigo por amenazas fuertes del rival.
+- `WIN_SCORE` / `LOSS_SCORE`: prioridad de estados terminales.
 
-2. Analisis:
-    Se propone evaluar en funcion de una variable numerica (`DEPTH`) y bajo diferentes oponentes (aleatorio y self-play), incluyendo separacion por color.
+## Qué estudia el notebook
 
-3. Propuesta de mejora:
-    El analisis permite encontrar cuellos de botella de costo/beneficio (por ejemplo, mayor profundidad con mejora marginal de winrate) y justificar mejoras futuras.
+El notebook de entrega cubre tres cosas que luego se mencionan en el PDF y en la sustentación:
 
-4. Presentacion:
-    Este README y el notebook estan pensados para que se pueda defender el diseno con evidencia reproducible.
+- rendimiento contra jugador aleatorio por color,
+- autodesempeño y comparación entre profundidades del mismo agente,
+- costo computacional al aumentar la profundidad.
+
+Además, deja guardadas las salidas del barrido para reutilizarlas en el informe.
+
+## Entrega
+
+La entrega está organizada para que quede clara en la revisión:
+
+1. **Diseño del agente**  
+   El agente es distinto a una política reactiva simple porque toma decisiones con búsqueda adversarial y poda alpha-beta.
+
+2. **Análisis**  
+   La variable numérica de estudio es `DEPTH`, y el notebook compara tanto contra aleatorio como entre versiones del mismo agente.
+
+3. **Propuesta de mejora**  
+   El costo crece rápido al subir profundidad, así que el estudio permite justificar una versión intermedia como mejor equilibrio entre calidad y tiempo.
+
+4. **Presentación**  
+   El notebook deja tablas y figuras para construir un PDF corto, directo y defendible.
+
+## Resultados y figuras
+
+Las figuras principales del notebook son:
+
+- winrate contra aleatorio por profundidad,
+- costo por jugada vs. profundidad,
+- heatmap depth vs. depth,
+- resumen visual de resultados completos por color.
+
+Los resultados del barrido se guardan en JSON dentro de `tournament/groups/Group Santi/results/`.
 
 ## Ideas de mejora futura
 
-- Ajustar dinamicamente la profundidad segun fase de partida.
-- Agregar tabla de transposicion para reutilizar estados evaluados.
-- Mejorar ordenamiento de jugadas con historial de cortes (move ordering adaptativo).
-- Probar una segunda version del agente con la misma base y distinta funcion de evaluacion para comparar versiones en el informe.
+- ajustar profundidad según la fase de la partida,
+- usar mejor ordenamiento de jugadas,
+- guardar estados repetidos para no evaluarlos dos veces,
+- comparar una segunda versión del mismo agente con otra función de evaluación.
